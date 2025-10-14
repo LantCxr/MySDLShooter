@@ -26,16 +26,22 @@ void MainScene::init()
     player.pos.x = game.getWindowWidth() / 2.0 - player.width / 2.0;
     player.pos.y = game.getWindowHeight() - player.height;
 
-    SDL_Log("MainScene init x:%d  y:%d speed:%f", player.pos.x, player.pos.y, player.speed);
+    projectilePlayerTemplate.texture = IMG_LoadTexture(game.getRenderer(), "assets/image/laser-1.png");
+    SDL_GetTextureSize(projectilePlayerTemplate.texture, &projectilePlayerTemplate.width, &projectilePlayerTemplate.height);
+    projectilePlayerTemplate.width *= 0.3;
+    projectilePlayerTemplate.height *= 0.3;
+    projectilePlayerTemplate.speed = 100.0;
 }
 
 void MainScene::update(double deltaTime)
 {
     keyboardControl(deltaTime);
+    updateProjectiles(deltaTime);
 }
 
 void MainScene::render()
 {
+    renderProjectiles();
     SDL_FRect postion = {static_cast<float>(player.pos.x), static_cast<float>(player.pos.y), player.width, player.height};
     //绘制玩家
     SDL_RenderTexture(game.getRenderer(), player.texture, NULL, &postion);
@@ -43,6 +49,13 @@ void MainScene::render()
 
 void MainScene::clean()
 {
+    SDL_DestroyTexture(player.texture);
+    SDL_DestroyTexture(projectilePlayerTemplate.texture);
+
+    for (auto projectile : projectilePlayerList)
+    {
+        delete projectile;
+    }
 }
 
 void MainScene::handleEvent(SDL_Event* event)
@@ -87,4 +100,52 @@ void MainScene::keyboardControl(double deltaTime)
         player.pos.y = game.getWindowHeight() - player.height;
     }
     
+    
+    if (keyboardState[SDL_SCANCODE_J])
+    {
+        auto time = SDL_GetTicks();
+        if (time - player.lastShootTime > player.coolDown)
+        {
+            player.lastShootTime = time;
+            shootPlayer();
+        }
+    }
+    
+}
+
+void MainScene::shootPlayer()
+{
+   ProjectilePlayer* projectile = new ProjectilePlayer(projectilePlayerTemplate);
+   projectilePlayerList.push_back(projectile);
+   projectile->pos.x = player.pos.x + player.width / 2.0 - projectile->width / 2.0;
+   projectile->pos.y = player.pos.y - projectile->height;
+}
+
+void MainScene::updateProjectiles(double deltaTime)
+{
+    for(auto it = projectilePlayerList.begin(); it != projectilePlayerList.end();)
+    {
+        auto projectile = *it;
+        projectile->pos.y -= deltaTime * projectile->speed;
+        //检查子弹是否超出屏幕
+        if (projectile->pos.y < -projectile->height)
+        {
+            delete projectile;
+            //进入下一个位置
+            it = projectilePlayerList.erase(it);
+        }
+        else
+        {
+            ++it;
+        }
+    }
+}
+
+void MainScene::renderProjectiles()
+{
+    for (auto projectile : projectilePlayerList)
+    {
+        SDL_FRect postion = { static_cast<float>(projectile->pos.x), static_cast<float>(projectile->pos.y), projectile->width, projectile->height };
+        SDL_RenderTexture(game.getRenderer(), projectile->texture, NULL, &postion);
+    }
 }

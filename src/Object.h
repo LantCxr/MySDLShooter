@@ -5,9 +5,19 @@
 
 struct Player{
     float width, height;
-    SDL_FPoint pos;
-    SDL_Texture* texture;
+    SDL_FPoint pos = {0,0};
+    SDL_Texture* texture = nullptr;
     float speed;
+
+    Uint64 lastShootTime;
+    Uint64 coolDown = 100;
+};  
+
+struct ProjectilePlayer{
+    float width, height;
+    SDL_FPoint pos = {0,0};
+    SDL_Texture* texture = nullptr;
+    float speed = 100;
 };
 
 #endif

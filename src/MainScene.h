@@ -3,6 +3,7 @@
 
 #include "SceneBase.h"
 #include "Object.h"
+#include <list>
 
 class Game;
 
@@ -20,8 +21,15 @@ public:
 
     void keyboardControl(double deltaTime);
 
+    void shootPlayer();
+    void updateProjectiles(double deltaTime);
+    void renderProjectiles();
+
 private:
     Player player;
+
+    ProjectilePlayer projectilePlayerTemplate;
+    std::list<ProjectilePlayer*> projectilePlayerList;
     Game &game;
 
 };
