@@ -20,4 +20,11 @@ struct ProjectilePlayer{
     float speed = 100;
 };
 
+struct Enemy{
+    float width, height;
+    SDL_FPoint pos = {0,0};
+    SDL_Texture* texture = nullptr;
+    float speed = 100;
+};
+
 #endif

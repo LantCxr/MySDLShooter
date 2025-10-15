@@ -4,6 +4,7 @@
 #include "SceneBase.h"
 #include "Object.h"
 #include <list>
+#include <random>
 
 class Game;
 
@@ -25,9 +26,17 @@ public:
     void updateProjectiles(double deltaTime);
     void renderProjectiles();
 
+    void spawnEnemy();
+    void updateEnemies(double deltaTime);
+    void renderEnemies();
 private:
-    Player player;
 
+    std::list<Enemy*> enemyList;
+    Enemy enemyTemplate;
+
+    std::mt19937 gen; //随机数生成器
+    std::uniform_real_distribution<float> dis;//随机数分布器
+    Player player;
     ProjectilePlayer projectilePlayerTemplate;
     std::list<ProjectilePlayer*> projectilePlayerList;
     Game &game;

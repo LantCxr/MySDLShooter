@@ -31,12 +31,25 @@ void MainScene::init()
     projectilePlayerTemplate.width *= 0.3;
     projectilePlayerTemplate.height *= 0.3;
     projectilePlayerTemplate.speed = 100.0;
+
+    enemyTemplate.texture = IMG_LoadTexture(game.getRenderer(), "assets/image/insect-1.png");
+    SDL_GetTextureSize(enemyTemplate.texture, &enemyTemplate.width, &enemyTemplate.height);
+    enemyTemplate.width *= 0.3;
+    enemyTemplate.height *= 0.3;
+    enemyTemplate.speed = 20.0;
+
+    std::random_device rd;
+    gen = std::mt19937(rd());
+    dis = std::uniform_real_distribution<float>(0.0, 1);
 }
 
 void MainScene::update(double deltaTime)
 {
     keyboardControl(deltaTime);
     updateProjectiles(deltaTime);
+    
+    //绘制敌人
+    updateEnemies(deltaTime);
 }
 
 void MainScene::render()
@@ -45,6 +58,11 @@ void MainScene::render()
     SDL_FRect postion = {static_cast<float>(player.pos.x), static_cast<float>(player.pos.y), player.width, player.height};
     //绘制玩家
     SDL_RenderTexture(game.getRenderer(), player.texture, NULL, &postion);
+
+    //生成敌人
+    spawnEnemy();
+    renderEnemies();
+
 }
 
 void MainScene::clean()
@@ -56,6 +74,14 @@ void MainScene::clean()
     {
         delete projectile;
     }
+
+    SDL_DestroyTexture(enemyTemplate.texture);
+    //清理敌人
+    for (auto enemy : enemyList)
+    {
+        delete enemy;
+    }
+    
 }
 
 void MainScene::handleEvent(SDL_Event* event)
@@ -147,5 +173,45 @@ void MainScene::renderProjectiles()
     {
         SDL_FRect postion = { static_cast<float>(projectile->pos.x), static_cast<float>(projectile->pos.y), projectile->width, projectile->height };
         SDL_RenderTexture(game.getRenderer(), projectile->texture, NULL, &postion);
+    }
+}
+
+void MainScene::spawnEnemy()
+{
+    if (dis(gen) > 1 / 1000.f)
+    {
+        return;
+    }
+    
+    Enemy* enemy = new Enemy(enemyTemplate);
+    enemy->pos.x = dis(gen) * (game.getWindowWidth() - enemy->width);
+    enemy->pos.y = -enemy->height;
+    enemyList.push_back(enemy);
+}
+
+void MainScene::updateEnemies(double deltaTime)
+{
+    for (auto it = enemyList.begin(); it != enemyList.end();)
+    {
+        auto enemy = *it;
+        enemy->pos.y += deltaTime * enemy->speed;
+        if (enemy->pos.y > game.getWindowHeight())
+        {
+            delete enemy;
+            it = enemyList.erase(it);
+        }
+        else
+        {
+            ++it;
+        }
+    }
+}
+
+void MainScene::renderEnemies()
+{
+    for (auto enemy : enemyList)
+    {
+        SDL_FRect postion = { static_cast<float>(enemy->pos.x), static_cast<float>(enemy->pos.y), enemy->width, enemy->height };
+        SDL_RenderTexture(game.getRenderer(), enemy->texture, NULL, &postion);
     }
 }
