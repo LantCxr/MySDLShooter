@@ -29,10 +29,18 @@ public:
     void spawnEnemy();
     void updateEnemies(double deltaTime);
     void renderEnemies();
+
+    void spawnProjectileEnemy(Enemy* enemy);
+    void updateProjectileEnemies(double deltaTime);
+    void renderProjectileEnemies();
+
 private:
 
     std::list<Enemy*> enemyList;
     Enemy enemyTemplate;
+
+    std::list<ProjectileEnemy*> projectileEnemyList;
+    ProjectileEnemy projectileEnemyTemplate;
 
     std::mt19937 gen; //随机数生成器
     std::uniform_real_distribution<float> dis;//随机数分布器

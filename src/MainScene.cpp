@@ -41,6 +41,12 @@ void MainScene::init()
     std::random_device rd;
     gen = std::mt19937(rd());
     dis = std::uniform_real_distribution<float>(0.0, 1);
+
+    projectileEnemyTemplate.texture = IMG_LoadTexture(game.getRenderer(), "assets/image/bullet-1.png");
+    SDL_GetTextureSize(projectileEnemyTemplate.texture, &projectileEnemyTemplate.width, &projectileEnemyTemplate.height);
+    projectileEnemyTemplate.width *= 0.3;
+    projectileEnemyTemplate.height *= 0.3;
+    projectileEnemyTemplate.speed = 100.0;
 }
 
 void MainScene::update(double deltaTime)
@@ -67,19 +73,39 @@ void MainScene::render()
 
 void MainScene::clean()
 {
-    SDL_DestroyTexture(player.texture);
-    SDL_DestroyTexture(projectilePlayerTemplate.texture);
+    if (player.texture != nullptr)
+    {
+        SDL_DestroyTexture(player.texture);
+    }
+     if (projectilePlayerTemplate.texture != nullptr)
+    {
+        SDL_DestroyTexture(projectilePlayerTemplate.texture);
+    }
 
     for (auto projectile : projectilePlayerList)
     {
         delete projectile;
     }
 
-    SDL_DestroyTexture(enemyTemplate.texture);
+    if (enemyTemplate.texture != nullptr)
+    {
+        SDL_DestroyTexture(enemyTemplate.texture);
+    }
     //清理敌人
     for (auto enemy : enemyList)
     {
         delete enemy;
+    }
+
+    if (projectileEnemyTemplate.texture != nullptr)
+    {
+        SDL_DestroyTexture(projectileEnemyTemplate.texture);
+    }
+    
+    //清理敌人子弹
+    for (auto projectile : projectileEnemyList)
+    {
+        delete projectile;
     }
     
 }
@@ -202,6 +228,11 @@ void MainScene::updateEnemies(double deltaTime)
         }
         else
         {
+            if (SDL_GetTicks() - enemy->lastShootTime > enemy->coolDown)
+            {
+                spawnProjectileEnemy(enemy);
+                enemy->lastShootTime = SDL_GetTicks();
+            }
             ++it;
         }
     }
@@ -214,4 +245,47 @@ void MainScene::renderEnemies()
         SDL_FRect postion = { static_cast<float>(enemy->pos.x), static_cast<float>(enemy->pos.y), enemy->width, enemy->height };
         SDL_RenderTexture(game.getRenderer(), enemy->texture, NULL, &postion);
     }
+}
+
+void MainScene::spawnProjectileEnemy(Enemy* enemy)
+{
+    ProjectileEnemy * projectile = new ProjectileEnemy(projectileEnemyTemplate);
+    projectileEnemyList.push_back(projectile);
+    projectile->pos.x = enemy->pos.x + enemy->width / 2.0 - projectile->width / 2.0;
+    projectile->pos.y = enemy->pos.y + enemy->height;
+
+    auto x = player.pos.x - projectile->pos.x;
+    auto y = player.pos.y - projectile->pos.y;
+    auto distance = sqrt(x * x + y * y);
+
+}
+
+void MainScene::updateProjectileEnemies(double deltaTime)
+{
+   for (auto ProjectileEnemy : projectileEnemyList)
+    {
+        auto x = ProjectileEnemy->pos.x;
+        auto y = ProjectileEnemy->pos.y;
+        if (x < 0 ||
+            x > game.getWindowWidth() - ProjectileEnemy->width ||
+            y > game.getWindowHeight() - ProjectileEnemy->height ||
+            y < 0
+        )
+        {
+            delete ProjectileEnemy;
+            projectileEnemyList.remove(ProjectileEnemy);
+        }
+        ProjectileEnemy->pos.y += deltaTime * ProjectileEnemy->speed;
+
+    } 
+}
+
+void MainScene::renderProjectileEnemies()
+{
+   for (auto ProjectileEnemy : projectileEnemyList)
+    {
+        SDL_FRect postion = { static_cast<float>(ProjectileEnemy->pos.x), static_cast<float>(ProjectileEnemy->pos.y), ProjectileEnemy->width, ProjectileEnemy->height };
+        SDL_RenderTexture(game.getRenderer(), ProjectileEnemy->texture, NULL, &postion);
+    }
+    
 }
