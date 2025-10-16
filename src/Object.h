@@ -33,6 +33,7 @@ struct Enemy{
 struct ProjectileEnemy{
     float width, height;
     SDL_FPoint pos = {0,0};
+    SDL_FPoint direction{0, 0};
     SDL_Texture* texture = nullptr;
     float speed = 100;
 };

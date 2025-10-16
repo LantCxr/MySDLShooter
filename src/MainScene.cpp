@@ -1,9 +1,11 @@
+#define _USE_MATH_DEFINES
 #include "MainScene.h"
 #include "Object.h"
 #include "Game.h"
 
 #include <SDL3/SDL.h>
 #include <SDL3_image/SDL_image.h>
+#include <math.h>
 
 MainScene::MainScene()
     :game(Game::getInstance())
@@ -56,6 +58,8 @@ void MainScene::update(double deltaTime)
     
     //绘制敌人
     updateEnemies(deltaTime);
+
+    updateProjectileEnemies(deltaTime);
 }
 
 void MainScene::render()
@@ -69,6 +73,7 @@ void MainScene::render()
     spawnEnemy();
     renderEnemies();
 
+    renderProjectileEnemies();
 }
 
 void MainScene::clean()
@@ -254,28 +259,41 @@ void MainScene::spawnProjectileEnemy(Enemy* enemy)
     projectile->pos.x = enemy->pos.x + enemy->width / 2.0 - projectile->width / 2.0;
     projectile->pos.y = enemy->pos.y + enemy->height;
 
-    auto x = player.pos.x - projectile->pos.x;
-    auto y = player.pos.y - projectile->pos.y;
-    auto distance = sqrt(x * x + y * y);
+    float x = (player.pos.x + player.width / 2.0) - (enemy->pos.x + enemy->width / 2.0);
+    float y = (player.pos.y + player.height / 2.0) - (enemy->pos.y + enemy->height / 2.0);
+    auto length = sqrt(x * x + y * y);
+    
+    if (length != 0) 
+    {
+        x /= length;
+        y /= length;
+        projectile->direction = {x, y};
+    } else {
+        projectile->direction = {0, 1}; // 默认向下
+    }
 
 }
 
 void MainScene::updateProjectileEnemies(double deltaTime)
 {
-   for (auto ProjectileEnemy : projectileEnemyList)
+   for (auto it = projectileEnemyList.begin(); it != projectileEnemyList.end();)
     {
-        auto x = ProjectileEnemy->pos.x;
-        auto y = ProjectileEnemy->pos.y;
-        if (x < 0 ||
-            x > game.getWindowWidth() - ProjectileEnemy->width ||
-            y > game.getWindowHeight() - ProjectileEnemy->height ||
-            y < 0
+        auto projectile = *it;
+        projectile->pos.y += deltaTime * projectile->speed * projectile->direction.y;
+        projectile->pos.x += deltaTime * projectile->speed * projectile->direction.x;
+        if (projectile->pos.x < 0 ||
+            projectile->pos.x > game.getWindowWidth() - projectile->width ||
+            projectile->pos.y > game.getWindowHeight() - projectile->height ||
+            projectile->pos.y < 0
         )
         {
-            delete ProjectileEnemy;
-            projectileEnemyList.remove(ProjectileEnemy);
+            delete projectile;
+            it = projectileEnemyList.erase(it);
         }
-        ProjectileEnemy->pos.y += deltaTime * ProjectileEnemy->speed;
+        else
+        {
+            ++it;
+        }
 
     } 
 }
@@ -284,8 +302,13 @@ void MainScene::renderProjectileEnemies()
 {
    for (auto ProjectileEnemy : projectileEnemyList)
     {
-        SDL_FRect postion = { static_cast<float>(ProjectileEnemy->pos.x), static_cast<float>(ProjectileEnemy->pos.y), ProjectileEnemy->width, ProjectileEnemy->height };
-        SDL_RenderTexture(game.getRenderer(), ProjectileEnemy->texture, NULL, &postion);
+        SDL_FRect postion = { 
+            static_cast<float>(ProjectileEnemy->pos.x), 
+            static_cast<float>(ProjectileEnemy->pos.y), 
+            ProjectileEnemy->width, 
+            ProjectileEnemy->height 
+        };
+        float angle = atan2f(ProjectileEnemy->direction.y, ProjectileEnemy->direction.x) * 180 / M_PI - 90;
+        SDL_RenderTextureRotated(game.getRenderer(), ProjectileEnemy->texture, NULL, &postion, angle, NULL, SDL_FLIP_NONE);
     }
-    
 }
