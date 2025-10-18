@@ -33,11 +33,13 @@ public:
     void spawnProjectileEnemy(Enemy* enemy);
     void updateProjectileEnemies(double deltaTime);
     void renderProjectileEnemies();
-
+    void enemyExplode(Enemy *enemy);
+    void updatePlayer(float deltaTime);
 private:
 
     std::list<Enemy*> enemyList;
     Enemy enemyTemplate;
+    
 
     std::list<ProjectileEnemy*> projectileEnemyList;
     ProjectileEnemy projectileEnemyTemplate;
@@ -48,6 +50,8 @@ private:
     ProjectilePlayer projectilePlayerTemplate;
     std::list<ProjectilePlayer*> projectilePlayerList;
     Game &game;
+
+    bool isDead = false;
 
 };
 

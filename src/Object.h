@@ -8,6 +8,7 @@ struct Player{
     SDL_FPoint pos = {0,0};
     SDL_Texture* texture = nullptr;
     float speed;
+    int hp = 3;
 
     Uint64 lastShootTime;
     Uint64 coolDown = 100;
@@ -18,6 +19,8 @@ struct ProjectilePlayer{
     SDL_FPoint pos = {0,0};
     SDL_Texture* texture = nullptr;
     float speed = 100;
+
+    int damage = 1;//玩家子弹伤害
 };
 
 struct Enemy{
@@ -25,6 +28,7 @@ struct Enemy{
     SDL_FPoint pos = {0,0};
     SDL_Texture* texture = nullptr;
     float speed = 100;
+    int hp = 2;
 
     Uint64 lastShootTime;
     Uint64 coolDown = 1000;
@@ -35,6 +39,8 @@ struct ProjectileEnemy{
     SDL_FPoint pos = {0,0};
     SDL_FPoint direction{0, 0};
     SDL_Texture* texture = nullptr;
-    float speed = 100;
+    float speed = 0.005;
+
+    int damage = 1;//敌机子弹伤害
 };
 #endif
