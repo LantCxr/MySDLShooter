@@ -49,6 +49,20 @@ void MainScene::init()
     projectileEnemyTemplate.width *= 0.3;
     projectileEnemyTemplate.height *= 0.3;
     projectileEnemyTemplate.speed = 50.0;
+
+    //加载爆炸模板数据
+    explosionTemplate.texture = IMG_LoadTexture(game.getRenderer(), "assets/effect/explosion.png");
+    SDL_GetTextureSize(explosionTemplate.texture, &explosionTemplate.width, &explosionTemplate.height);
+    //explosionTemplate.height *= 0.3;
+    explosionTemplate.totalFrames = explosionTemplate.width / explosionTemplate.height;
+    explosionTemplate.width = explosionTemplate.height;
+
+    //初始化物品模板
+    itemLifeTemplate.texture = IMG_LoadTexture(game.getRenderer(), "assets/image/bonus_life.png");
+    SDL_GetTextureSize(itemLifeTemplate.texture, &itemLifeTemplate.width, &itemLifeTemplate.height);
+    itemLifeTemplate.width *= 0.3;
+    itemLifeTemplate.height *= 0.3;
+
 }
 
 void MainScene::update(double deltaTime)
@@ -59,6 +73,9 @@ void MainScene::update(double deltaTime)
     updateEnemies(deltaTime);
     updateProjectileEnemies(deltaTime);
     updatePlayer(deltaTime);
+    updateExplosions(deltaTime);
+
+    updateItems(deltaTime); //更新物品
 }
 
 void MainScene::render()
@@ -77,7 +94,9 @@ void MainScene::render()
     //生成敌人
     spawnEnemy();
     renderEnemies();
+    renderExplosions();
 
+    renderItems(); //绘制物品
 }
 
 void MainScene::clean()
@@ -116,7 +135,37 @@ void MainScene::clean()
     {
         delete projectile;
     }
+
+    //清理爆炸资源
+    for (auto &explosion : explosionList)
+    {
+        if (explosion != nullptr)
+        {
+            delete explosion;
+        }
+    }
+    explosionList.clear();
     
+    if (explosionTemplate.texture != nullptr)
+    {
+        SDL_DestroyTexture(explosionTemplate.texture);
+    }
+
+    //清理物品
+    for (auto item : itemList)
+    {
+        if (item != nullptr)
+        {
+            delete item;
+        }
+    }
+    itemList.clear();
+
+    if(itemLifeTemplate.texture != nullptr)
+    {
+        SDL_DestroyTexture(itemLifeTemplate.texture);
+    }
+
 }
 
 void MainScene::handleEvent(SDL_Event* event)
@@ -237,7 +286,30 @@ void MainScene::updateProjectiles(double deltaTime)
 
 void MainScene::enemyExplode(Enemy *enemy)
 {
+    auto currentTime = SDL_GetTicks();
+    Explosion* explosion = new Explosion(explosionTemplate);
+    explosion->pos.x = enemy->pos.x + enemy->width / 2.0 - explosion->width / 2.0;
+    explosion->pos.y = enemy->pos.y + enemy->height / 2.0 - explosion->height / 2.0;
+    explosion->startTime = currentTime;
+    explosionList.push_back(explosion);
+
+    //当敌人死亡时，有一定概率掉落物品
+    if (dis(gen) < 0.5f)
+    {
+        dropItem(enemy);
+    }
+
     delete enemy;
+}
+
+void MainScene::playerExplode()
+{
+    auto currentTime = SDL_GetTicks();
+    Explosion* explosion = new Explosion(explosionTemplate);
+    explosion->pos.x = player.pos.x + player.width / 2.0 - explosion->width / 2.0;
+    explosion->pos.y = player.pos.y + player.height / 2.0 - explosion->height / 2.0;
+    explosion->startTime = currentTime;
+    explosionList.push_back(explosion);
 }
 
 void MainScene::updatePlayer(float deltaTime)
@@ -249,6 +321,7 @@ void MainScene::updatePlayer(float deltaTime)
     if (player.hp <= 0)
     {
         isDead = true;
+        playerExplode();
     }
 
     for(auto enemy : enemyList)
@@ -270,6 +343,147 @@ void MainScene::updatePlayer(float deltaTime)
         {
             player.hp -= 1;
             enemy->hp = 0; //敌人死亡
+        }
+    }
+}
+
+void MainScene::updateExplosions(double deltaTime)
+{
+    auto currentTime = SDL_GetTicks();
+    for (auto it = explosionList.begin(); it != explosionList.end();)
+    {
+        auto explosion = *it;
+        explosion->currentFrame = (currentTime - explosion->startTime) * explosion->FPS / 1000.f;
+        //检测动画是否播放完毕
+        if (explosion->currentFrame >= explosion->totalFrames)
+        {
+            delete explosion;
+            it = explosionList.erase(it);
+        }
+        else{
+            ++it;
+        }
+    }
+}
+
+void MainScene::renderExplosions()
+{
+    for (auto explosions : explosionList)
+    {
+        SDL_FRect src = { explosions->currentFrame * explosions->width, 0, explosions->width, explosions->height };
+        SDL_FRect postion = { static_cast<float>(explosions->pos.x), static_cast<float>(explosions->pos.y), explosions->width, explosions->height };
+        //渲染纹理特定区域
+        SDL_RenderTexture(game.getRenderer(), explosions->texture, &src, &postion);
+    }
+    
+}
+
+void MainScene::dropItem(Enemy *enemy)
+{
+    auto item = new Item(itemLifeTemplate);
+    item->pos.x = enemy->pos.x + enemy->width / 2.0 - item->width / 2.0;
+    item->pos.y = enemy->pos.y + enemy->height / 2.0 - item->height / 2.0;
+    
+    //生成随机方向
+    float angle = dis(gen) * 2 * M_PI;
+    item->direction.x = cos(angle);
+    item->direction.y = sin(angle);
+
+    itemList.push_back(item);
+}
+
+void MainScene::updateItems(double deltaTime)
+{
+    for (auto it = itemList.begin(); it != itemList.end();)
+    {
+        auto item = *it;
+        //更新物品位置
+        item->pos.x += item->direction.x * item->speed * deltaTime;
+        item->pos.y += item->direction.y * item->speed * deltaTime;
+
+        //处理屏幕边缘反弹
+        if (item->pos.x < 0 && item->bounceCount > 0){
+            item->direction.x = -item->direction.x;
+            item->bounceCount--;
+        }
+
+        if (item->pos.x + item->width > game.getWindowWidth() && item->bounceCount > 0){
+            item->direction.x = -item->direction.x;
+            item->bounceCount--;
+        }
+
+        if (item->pos.y < 0 && item->bounceCount > 0){
+            item->direction.y = -item->direction.y;
+            item->bounceCount--;
+        }
+
+        if (item->pos.y + item->height > game.getWindowHeight() && item->bounceCount > 0){
+            item->direction.y = -item->direction.y;
+            item->bounceCount--;
+        }
+
+        //超出屏幕删除
+        if (item->pos.x + item->width < 0 ||
+            item->pos.x > game.getWindowWidth() ||
+            item->pos.y + item->height < 0 ||
+            item->pos.y > game.getWindowHeight())
+        {
+            delete item;
+            it = itemList.erase(it);
+        }
+        else
+        {
+            //检测物品与玩家的碰撞
+            SDL_Rect itemRect = { 
+                static_cast<int>(item->pos.x), 
+                static_cast<int>(item->pos.y), 
+                static_cast<int>(item->width), 
+                static_cast<int>(item->height) 
+            };
+            SDL_Rect playerRect = {
+                static_cast<int>(player.pos.x),
+                static_cast<int>(player.pos.y),
+                static_cast<int>(player.width),
+                static_cast<int>(player.height)
+            };
+            if (SDL_HasRectIntersection(&itemRect, &playerRect))
+            {
+                playerGetItem(item);
+                delete item;
+                it = itemList.erase(it);
+            }
+            else
+            {
+                ++it;
+            }
+        }
+    }
+    
+}
+
+void MainScene::renderItems()
+{
+    for (auto &item : itemList)
+    {
+        SDL_FRect itemRect = {
+            static_cast<float>(item->pos.x),
+            static_cast<float>(item->pos.y),
+            static_cast<float>(item->width),
+            static_cast<float>(item->height)
+        };
+        SDL_RenderTexture(game.getRenderer(), item->texture, NULL, &itemRect);
+    }
+    
+}
+
+void MainScene::playerGetItem(Item *item)
+{
+    if (item->type == ItemType::Health)
+    {
+        player.hp += 1;
+        if (player.hp > player.maxHealth)
+        {
+            player.hp = player.maxHealth;
         }
     }
 }

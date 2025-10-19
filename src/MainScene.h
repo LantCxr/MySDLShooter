@@ -34,12 +34,23 @@ public:
     void updateProjectileEnemies(double deltaTime);
     void renderProjectileEnemies();
     void enemyExplode(Enemy *enemy);
+    void playerExplode();
     void updatePlayer(float deltaTime);
+
+    void updateExplosions(double deltaTime);
+    void renderExplosions();
+
+    void dropItem(Enemy *enemy); //敌人死亡后掉落物品
+    void updateItems(double deltaTime); //更新物品
+    void renderItems(); //渲染物品
+    void playerGetItem(Item *item); //玩家捡起物品
 private:
 
     std::list<Enemy*> enemyList;
     Enemy enemyTemplate;
-    
+
+    Explosion explosionTemplate;
+    std::list<Explosion*> explosionList; //存储活动爆炸动画的列表
 
     std::list<ProjectileEnemy*> projectileEnemyList;
     ProjectileEnemy projectileEnemyTemplate;
@@ -52,6 +63,9 @@ private:
     Game &game;
 
     bool isDead = false;
+
+    Item itemLifeTemplate; //生命物品模板
+    std::list<Item*> itemList; //存储活动物品的列表
 
 };
 
