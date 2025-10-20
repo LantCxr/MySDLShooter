@@ -66,6 +66,33 @@ void Game::init()
         SDL_Log("SDL_InitRenderer Error: %s\n" ,SDL_GetError());
         isRunning = false;
     }
+
+    //初始化SDL_Mixer
+    if (Mix_Init(MIX_INIT_MP3) < 0)
+    {
+        SDL_Log("SDL_InitMix Error: %s\n", SDL_GetError());
+        isRunning = false;
+    }
+
+    //打开音频设备
+    SDL_AudioSpec spec;
+    spec.freq = 44100;
+    spec.format = SDL_AUDIO_S16;
+    spec.channels = 2;
+
+    if (Mix_OpenAudio(0, &spec) < 0)
+    {
+        SDL_Log("SDL_InitMix Error: %s\n", SDL_GetError());
+        isRunning = false;
+    }
+
+    // 设置音效channel数量
+    Mix_AllocateChannels(32);
+
+    // 设置音乐音量
+    Mix_VolumeMusic(MIX_MAX_VOLUME / 4);
+    Mix_Volume(-1, MIX_MAX_VOLUME / 8);
+    
     currentScene = new MainScene();
     currentScene->init();
 }
@@ -74,6 +101,10 @@ void Game::Clear()
 {
     currentScene->clean();
     delete currentScene;
+
+    //清理SDL_Mixer
+    Mix_CloseAudio();
+    Mix_Quit();
 
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);

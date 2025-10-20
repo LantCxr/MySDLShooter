@@ -5,6 +5,8 @@
 #include "Object.h"
 #include <list>
 #include <random>
+#include <map>
+#include <SDL3_mixer/SDL_mixer.h>
 
 class Game;
 
@@ -66,6 +68,9 @@ private:
 
     Item itemLifeTemplate; //生命物品模板
     std::list<Item*> itemList; //存储活动物品的列表
+
+    Mix_Music* bgm;
+    std::map<std::string, Mix_Chunk*> sounds; //存储声音的map
 
 };
 

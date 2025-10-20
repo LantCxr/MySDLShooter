@@ -63,6 +63,21 @@ void MainScene::init()
     itemLifeTemplate.width *= 0.3;
     itemLifeTemplate.height *= 0.3;
 
+    //读取并播放背景音乐
+    bgm = Mix_LoadMUS("assets/music/03_Racing_Through_Asteroids_Loop.ogg");
+    if (bgm == nullptr)
+    {
+        SDL_LogError(SDL_LOG_PRIORITY_ERROR,"Failed to load music: %s", SDL_GetError());
+    }
+    Mix_PlayMusic(bgm, -1);
+
+    //读取音效资源
+    sounds["player_shoot"] = Mix_LoadWAV("assets/sound/laser_shoot4.wav");
+    sounds["enemy_shoot"] = Mix_LoadWAV("assets/sound/xs_laser.wav");
+    sounds["player_explode"] = Mix_LoadWAV("assets/sound/explosion1.wav");
+    sounds["enemy_explode"] = Mix_LoadWAV("assets/sound/explosion3.wav");
+    sounds["hit"] = Mix_LoadWAV("assets/sound/eff11.wav");
+    sounds["get_item"] = Mix_LoadWAV("assets/sound/eff5.wav");
 }
 
 void MainScene::update(double deltaTime)
@@ -166,6 +181,22 @@ void MainScene::clean()
         SDL_DestroyTexture(itemLifeTemplate.texture);
     }
 
+    //清理音效
+    for (auto &sound : sounds)
+    {
+        if (sound.second != nullptr)
+        {
+            Mix_FreeChunk(sound.second);
+        }
+    }
+
+    //清理背景音乐
+    if (bgm != nullptr)
+    {
+        Mix_HaltMusic();
+        Mix_FreeMusic(bgm);
+    }
+
 }
 
 void MainScene::handleEvent(SDL_Event* event)
@@ -229,11 +260,11 @@ void MainScene::shootPlayer()
     {
         return;
     }
-    
-   ProjectilePlayer* projectile = new ProjectilePlayer(projectilePlayerTemplate);
-   projectilePlayerList.push_back(projectile);
-   projectile->pos.x = player.pos.x + player.width / 2.0 - projectile->width / 2.0;
-   projectile->pos.y = player.pos.y - projectile->height;
+    Mix_PlayChannel(-1, sounds["player_shoot"], 0);
+    ProjectilePlayer* projectile = new ProjectilePlayer(projectilePlayerTemplate);
+    projectilePlayerList.push_back(projectile);
+    projectile->pos.x = player.pos.x + player.width / 2.0 - projectile->width / 2.0;
+    projectile->pos.y = player.pos.y - projectile->height;
 }
 
 void MainScene::updateProjectiles(double deltaTime)
@@ -269,6 +300,7 @@ void MainScene::updateProjectiles(double deltaTime)
                 };
                 if (SDL_HasRectIntersection(&enemyRect, &projectileRect))
                 {
+                    Mix_PlayChannel(-1, sounds["hit"], 0);
                     enemy->hp -= projectile->damage;
                     delete projectile;
                     it = projectilePlayerList.erase(it);
@@ -286,6 +318,8 @@ void MainScene::updateProjectiles(double deltaTime)
 
 void MainScene::enemyExplode(Enemy *enemy)
 {
+    Mix_PlayChannel(-1, sounds["enemy_explode"], 0);
+
     auto currentTime = SDL_GetTicks();
     Explosion* explosion = new Explosion(explosionTemplate);
     explosion->pos.x = enemy->pos.x + enemy->width / 2.0 - explosion->width / 2.0;
@@ -321,6 +355,7 @@ void MainScene::updatePlayer(float deltaTime)
     if (player.hp <= 0)
     {
         isDead = true;
+        Mix_PlayChannel(-1, sounds["player_explode"], 0);
         playerExplode();
     }
 
@@ -478,6 +513,7 @@ void MainScene::renderItems()
 
 void MainScene::playerGetItem(Item *item)
 {
+    Mix_PlayChannel(-1, sounds["get_item"], 0);
     if (item->type == ItemType::Health)
     {
         player.hp += 1;
@@ -555,6 +591,7 @@ void MainScene::renderEnemies()
 
 void MainScene::spawnProjectileEnemy(Enemy* enemy)
 {
+    Mix_PlayChannel(-1, sounds["enemy_shoot"], 0);
     ProjectileEnemy * projectile = new ProjectileEnemy(projectileEnemyTemplate);
     projectileEnemyList.push_back(projectile);
     projectile->pos.x = enemy->pos.x + enemy->width / 2.0 - projectile->width / 2.0;
@@ -607,6 +644,7 @@ void MainScene::updateProjectileEnemies(double deltaTime)
             };
             if (SDL_HasRectIntersection(&enemyRect, &playerRect))
             {
+                Mix_PlayChannel(-1, sounds["hit"], 0);
                 player.hp -= projectile->damage;
                 delete projectile;
                 it = projectileEnemyList.erase(it);
