@@ -1,6 +1,6 @@
 #ifndef GAME_H
 #define GAME_H
-
+#include "Object.h"
 #include "SceneBase.h"
 #include <SDL3/SDL.h>
 #include <SDL3_mixer/SDL_mixer.h>
@@ -31,6 +31,9 @@ public:
     inline int getWindowWidth() { return windowWidth; }
     inline int getWindowHeight() { return windowHeight; }
 
+    void backgroundUpdate(float deltaTime);
+    void backgroundRender();
+
 private:
     Game();
     Game(const Game&) = delete;
@@ -46,7 +49,9 @@ private:
     int FPS = 60;
     Uint64 frameTime = 100000000 / FPS;
     double deltaTime = 0;
-
+    
+    Background nearStars;//近处的星星
+    Background farStars;//远处的星星
 };
 
 

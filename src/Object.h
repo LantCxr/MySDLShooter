@@ -74,4 +74,14 @@ struct Item{
     int speed = 50;//物品下落速度
     int bounceCount = 3;//物品碰到屏幕边缘时反弹次数
 };
+
+//背景数据结构
+struct Background{
+    SDL_Texture* texture = nullptr;
+    SDL_FPoint pos = {0,0};
+    float offset = 0;
+    float width = 0;
+    float height = 0;
+    float speed = 30;
+};
 #endif
