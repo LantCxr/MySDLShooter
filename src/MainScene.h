@@ -7,6 +7,7 @@
 #include <random>
 #include <map>
 #include <SDL3_mixer/SDL_mixer.h>
+#include <SDL3_ttf/SDL_ttf.h>
 
 class Game;
 
@@ -46,6 +47,8 @@ public:
     void updateItems(double deltaTime); //更新物品
     void renderItems(); //渲染物品
     void playerGetItem(Item *item); //玩家捡起物品
+
+    void renderUI();
 private:
 
     std::list<Enemy*> enemyList;
@@ -72,6 +75,10 @@ private:
     Mix_Music* bgm;
     std::map<std::string, Mix_Chunk*> sounds; //存储声音的map
 
+    SDL_Texture* uiHealth;
+
+    TTF_Font* scoreFont;
+    int score = 0; //玩家得分
 };
 
 #endif

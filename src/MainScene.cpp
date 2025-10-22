@@ -6,6 +6,8 @@
 #include <SDL3/SDL.h>
 #include <SDL3_image/SDL_image.h>
 #include <math.h>
+#include <string>
+#include <SDL3_ttf/SDL_ttf.h>
 
 MainScene::MainScene()
     :game(Game::getInstance())
@@ -78,6 +80,22 @@ void MainScene::init()
     sounds["enemy_explode"] = Mix_LoadWAV("assets/sound/explosion3.wav");
     sounds["hit"] = Mix_LoadWAV("assets/sound/eff11.wav");
     sounds["get_item"] = Mix_LoadWAV("assets/sound/eff5.wav");
+
+    // 读取ui Health
+    uiHealth = IMG_LoadTexture(game.getRenderer(), "assets/image/Health UI Black.png"); //初始化玩家生命值
+
+    // 初始化SDL_ttf
+    if (TTF_Init() == -1) {
+        SDL_LogError(SDL_LOG_CATEGORY_ERROR, "Failed to initialize SDL_ttf: %s", SDL_GetError());
+        return;
+    }
+
+    // 载入字体
+    scoreFont = TTF_OpenFont("assets/font/VonwaonBitmap-12px.ttf", 24);
+    if (!scoreFont) {
+        SDL_LogError(SDL_LOG_CATEGORY_ERROR, "Failed to load font: %s", SDL_GetError());
+        return;
+    }
 }
 
 void MainScene::update(double deltaTime)
@@ -112,6 +130,8 @@ void MainScene::render()
     renderExplosions();
 
     renderItems(); //绘制物品
+
+    renderUI();
 }
 
 void MainScene::clean()
@@ -197,6 +217,18 @@ void MainScene::clean()
         Mix_FreeMusic(bgm);
     }
 
+    // 清理ui
+    if (uiHealth != nullptr){
+        SDL_DestroyTexture(uiHealth);
+    }
+    
+    // 清理字体
+    if (scoreFont != nullptr){
+        TTF_CloseFont(scoreFont);
+        scoreFont = nullptr;
+    }
+
+    TTF_Quit();
 }
 
 void MainScene::handleEvent(SDL_Event* event)
@@ -332,7 +364,8 @@ void MainScene::enemyExplode(Enemy *enemy)
     {
         dropItem(enemy);
     }
-
+    score += 10;  // 击败敌机获得10分
+    
     delete enemy;
 }
 
@@ -513,6 +546,7 @@ void MainScene::renderItems()
 
 void MainScene::playerGetItem(Item *item)
 {
+    score += 5;  // 拾取物品获得5分
     Mix_PlayChannel(-1, sounds["get_item"], 0);
     if (item->type == ItemType::Health)
     {
@@ -522,6 +556,70 @@ void MainScene::playerGetItem(Item *item)
             player.hp = player.maxHealth;
         }
     }
+}
+
+/**
+ * 渲染用户界面(UI)的函数，主要用于显示玩家生命值
+ * 通过两个循环分别渲染灰色和彩色的心形图标来表示最大生命值和当前生命值
+ */
+void MainScene::renderUI()
+{
+
+    // 初始化UI元素的坐标和尺寸参数
+    int x = 10;          // UI元素的起始x坐标
+    int y = 10;          // UI元素的起始y坐标
+    int size = 32;       // 每个心形图标的尺寸
+    int offset = 40;     // 心形图标之间的间距
+    // 设置纹理颜色为灰色(100, 100, 100)，用于显示最大生命值
+    SDL_SetTextureColorMod(uiHealth, 100, 100, 100); // 颜色减淡
+    // 第一个循环：渲染灰色的心形图标，表示玩家的最大生命值
+    for (int i = 0; i < player.maxHealth; i++)
+    {
+        // 创建并设置每个心形图标的矩形区域
+        SDL_FRect rect = {x + i * offset, y, size, size};
+        // 渲染灰色心形图标
+        SDL_RenderTexture(game.getRenderer(), uiHealth, NULL, &rect);
+    }
+    // 重置纹理颜色为原始颜色(255, 255, 255)
+    SDL_SetTextureColorMod(uiHealth, 255, 255, 255); // reset color
+    // 第二个循环：渲染彩色的心形图标，表示玩家的当前生命值
+    for (int i = 0; i < player.hp; i++)
+    {
+        // 创建并设置每个心形图标的矩形区域
+        SDL_FRect rect = {x + i * offset, y, size, size};
+        // 渲染彩色心形图标
+        SDL_RenderTexture(game.getRenderer(), uiHealth, NULL, &rect);
+    }
+
+    if (!scoreFont) {
+        SDL_LogError(SDL_LOG_CATEGORY_ERROR, "Font not loaded");
+        return;
+    }
+    // 渲染得分
+    auto text = "SCORE:" + std::to_string(score);
+    SDL_Color color = {255, 255, 255, 255};  // 白色
+       
+    SDL_Surface* surface = TTF_RenderText_Solid(scoreFont, text.c_str(), text.length(), color);
+    if (!surface) {
+        SDL_LogError(SDL_LOG_CATEGORY_ERROR, "Failed to render text: %s", SDL_GetError());
+        return;
+    }
+
+    SDL_Texture* texture = SDL_CreateTextureFromSurface(game.getRenderer(), surface);
+    if (!texture) {
+        SDL_LogError(SDL_LOG_CATEGORY_ERROR, "Failed to create texture: %s", SDL_GetError());
+        SDL_DestroySurface(surface);
+        return;
+    }
+
+    SDL_FRect rect = {static_cast<float>(game.getWindowWidth() - 10 - surface->w), 
+                  static_cast<float>(10), 
+                  static_cast<float>(surface->w), 
+                  static_cast<float>(surface->h)};
+
+    SDL_RenderTexture(game.getRenderer(), texture, NULL, &rect);
+    SDL_DestroySurface(surface);
+    SDL_DestroyTexture(texture);
 }
 
 void MainScene::renderProjectiles()
